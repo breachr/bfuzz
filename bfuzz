@@ -1,0 +1,444 @@
+#!/bin/python3
+# -*- coding: utf-8 -*-
+
+import os, time, argparse, signal, re, random, traceback
+import requests
+from base64 import b64encode
+from termcolor import colored
+from threading import Thread, active_count
+from requests_html import HTMLSession
+import csv
+import multiprocessing 
+from urllib3.exceptions import InsecureRequestWarning
+import urllib
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+os.system('clear')
+print("""
+                    .:odxxddl:,.                
+                  'lxOkol::;;,,,'.               
+               ,xXWKOkOKXXXX0xl;.               
+             .dNMMMMMWXOdooooddxdc;.            
+            ,OWMMWXkl;.           ..            
+           cXMWKd:.                             
+         .oNMWk'                         ..     
+        .dNMWx.                          'd:    
+       .xWMWx.                           .xK;   
+      .dWMWk.                             dW0,  
+      :XMMK;   .                     .    dWMO  
+      :XMM0'  .oo'....';:;,'.......'c;   .xMWk  
+      .oNMX;  .dNNK0KXNWMk:'...'',,...   ,KMO'  
+       .oNWd.  'OWMMMMMMMx,.            .dWO'   
+         cKK;   ,0MMMMMMMx,.            cKk'    
+          ,Ox'   ;0MMMMMMx,.          .:Od.     
+           .okd,  ;KMMMMMx'.        .oOkc       bfuzz
+             :O0:  ,xKWMWd..       .xKx'        by breachr 
+              .ckl.  .,:c'        ,xx,          
+                .::.            .;c,   
+                
+ """)
+logpath = "/home/breachr/OneDrive/ATTACK/PROJECT/bfuzz_out.md"
+wldir = "/home/breachr/OneDrive/ATTACK/FILE/Breachbox/payloads/wl"
+wls = [
+    # ? Breachlist
+    # wldir+"/blist.txt",
+    # ? Custom WL
+    # "/home/breachr/OneDrive/ATTACK/PROJECT/HTB/traceback/customwl",
+    # ? General Sanitization
+    # wldir+"/inj_sani.txt",
+    # ? Verbs
+    # wldir+"/http_verbs.txt",
+    # ? Login
+    # wldir+"/inj_login_sql_xpath_ldap.txt",
+    # wldir+"/user_S.txt",
+    # wldir+"/pw_default_comb.txt",                           # Use .format(fuzz.split(':')[0]) & [1] or b64 (Basic Auth)
+    # wldir+"/pw_default.txt",
+    # wldir+"/pw_200_us.txt",
+    # wldir+"/pw_200_de.txt",
+    # wldir+"/pw_2000_int.txt",
+    # wldir+"/pw_4000_date.txt",
+    # wldir+"/pw_9000_comp.txt",
+    # wldir+"/tech/pw_tomcat_default.txt",
+    # ? 403/401 Bypass
+    # wldir+"/http_403_401_header_both.txt",           # Replaces both (doesnt work with bfuzz)
+    # wldir+"/http_403_401_header_name.txt",           # "fuzz: "127.0.0.1." / "localhost"
+    # wldir+"/http_403_401_header_content.txt",        # "Host":fuzz
+    # wldir+"/http_403_401_header_path.txt",           # WIP
+    # ? Path Traversal
+    # wldir+"/inj_trav_all.txt",           # filename={}
+    # wldir+"/inj_trav_lin.txt",           # filename={}
+    # wldir+"/inj_trav_lincat.txt",        # filename={}
+    # wldir+"/inj_trav_win_boot.txt",           # filename={}
+    # wldir+"/inj_trav_win_hosts.txt",           # filename={}
+    # wldir+"/inj_trav_wincat.txt",        # filename={}
+    # wldir+"/inj_trav_web.txt",           # filename={}
+    # wldir+"/inj_trav_rfi.txt",           # filename={}
+    # wldir+"/inj_trav_errorlog.txt",      # filename={}
+    # ? CMD Injection
+    # wldir+"/inj_cmd_lin.txt",            # Requires WL Modification + tcpdump + BSHARE
+    # wldir+"/inj_cmd_win.txt",            # Requires WL Modification + tcpdump + BSHARE
+    # ? SQL Injection
+    # wldir+"/sqli/restore_byresponse.txt",             # Banane{}
+    # wldir+"/sqli/restore_bytime.txt",                 # Banane{}
+    # wldir+"/sqli/enum_identify_dbms.txt",             # into restored: Banane' aNd {} -- comm
+    # wldir+"/sqli/enum_identify_dbms_stacked.txt",     # into restored stacked: Banane'; {} -- comm
+    # UNION
+    # wldir+"/sqli/union_enum.txt",                     # into restored: Banane' {} -- comm
+    # wldir+"/sqli/union_confirm.txt",                  # into union: ' UNION SELECT NULL,{} -- comm  >  !requires WL mod!
+    # wldir+"/sqli/mymaria/extract_union.txt",          # into union: ' UNION SELECT NULL,{} -- comm  >  !requires WL mod!
+    # TIME
+    # wldir+"/sqli/extract_time.txt",                   # into restored: Banane'||{}||'           >  !requires WL modification!
+    # wldir+"/sqli/extract_time_mssql.txt",             # into restored: Banane'||{}||'           >  !requires WL modification!
+    # wldir+"/sqli/extract_time_mssql_DBNAME.txt",      # Banane' {} -- comm       >  !requires WL modification!
+    # OOB
+    # wldir+"/sqli/extract_oob.txt",                    # into restored: Banane' {} -- comm       >  !requires WL modification!
+    # ? File Upload
+    # wldir+"/upload_null.txt",
+    # wldir+"/upload_php.txt",
+    # wldir+"/upload_asp.txt",
+    # wldir+"/upload_other.txt",
+    # wldir+"/upload_dir.txt",        # banane.com/{}webshell_cmd.php (also try upload URL as startpoint)
+    # ? SSRF
+    # wldir+"/inj_ssrf.txt",
+    # ? XSS
+    # 
+    # ? Other
+    # wldir+"/usr_S.txt",
+    # wldir+"/azAZ09.txt",
+    # wldir+"/0255.txt",
+]
+matches = {
+    "XSS Sources": [
+        "document.URL",
+        "document.documentURI",
+        "document.URLUnencoded",
+        "document.baseURI",
+        "location",
+        "document.cookie",
+        "document.referrer",
+        "window.name",
+        "history.pushState",
+        "history.replaceState",
+        "localStorage",
+        "sessionStorage",
+        "IndexedDB",
+        "Database",
+    ],
+    "XSS Sinks": [
+        "document.write",
+        "window.location",
+        "document.cookie",
+        "eval",
+        "document.domain",
+        "WebSocket",
+        "element.src",
+        "postMessage",
+        "setRequestHeader",
+        "FileReader.readAsText",
+        "ExecuteSql",
+        "sessionStorage.setItem",
+        "document.evaluate",
+        "JSON.parse",
+        "element.setAttribute",
+        "RegExp",
+        "innerHTML",
+    ],
+    "Info Disclosure": [
+        "stack",
+        "trace",
+    ],
+    "Tech Disclosure": [
+        "ng-app",   # See process > {{$on.constructor('alert(1)')()}}
+        "ng-scope",
+    ],
+}
+noencodes = [] # Dont Encode these chars in requests (Nullbyte etc.)
+# noencodes = ['!','~','%','^','#', %00]  
+
+class Attack: # ! insert:   fuzz     "+fuzz+"      +fuzz        "asdf {} asdf".format(fuzz)
+    def __init__(self, url, cookies, headers, postparams, word, i):
+        self.url = url
+        self.cookies = cookies
+        self.headers = headers
+        self.postparams = postparams
+        self.word = word
+        self.i = i
+  
+    def send(self):
+        print(" "*100, end="\r")
+        outp = self.i + "\t" + (' '.join(map(str, [self.word]))) + " "*10
+        print(outp[:95], end="\r")
+                
+        if Attack.render:
+            self.session = HTMLSession()
+            if Attack.X == "POST":
+                resp = self.session.post(self.url,headers=self.headers,cookies=self.cookies,proxies=Attack.proxy,verify=False, allow_redirects=Attack.redirects)
+            else:
+                resp = self.session.get(self.url,headers=self.headers,cookies=self.cookies,proxies=Attack.proxy,verify=False, allow_redirects=False)
+        else:
+            brequests = Attack.NoEncodeSession()
+            if Attack.X == "POST":
+                resp = brequests.post(self.url,headers=self.headers,cookies=self.cookies,data=self.postparams.encode('utf-8'),proxies=Attack.proxy,verify=False, allow_redirects=Attack.redirects)
+            else:
+                resp = brequests.get(self.url,headers=self.headers,cookies=self.cookies,proxies=Attack.proxy,verify=False, allow_redirects=Attack.redirects)
+      
+        resplines = str(resp.text.count('\n'))
+        if resp.status_code not in Attack.observations["codes"]:
+            Attack.observations["codes"].append(resp.status_code)
+        if resplines not in Attack.observations["lines"]:
+            Attack.observations["lines"].append(resplines)
+        if round(resp.elapsed.total_seconds()) not in Attack.observations["times"]:
+            Attack.observations["times"].append(round(resp.elapsed.total_seconds()))
+        if self.word in resp.text:
+            Attack.reflections.append(self.word)
+        if (
+            # resp.elapsed.total_seconds() > 4 or # > maybe always show resp above 4 seconds
+            not any([x in resp.text for x in Attack.filter_str]) and
+            (not Attack.filter_str_rev or any([x in resp.text for x in Attack.filter_str_rev])) and            
+            (not resp.status_code in Attack.filter_code) and
+            (not str(len(resp.content)) in Attack.filter_size) and
+            (not resplines in Attack.filter_line) 
+            ):
+            if resp.elapsed.total_seconds() > Attack.filter_time:
+                print("                                                                  ", end="\r")
+                if resp.elapsed.total_seconds() > 4:
+                    resptime = '\033[95m' + str(round(resp.elapsed.total_seconds(), 2)) + '\033[0m'
+                else:
+                    resptime = str(round(resp.elapsed.total_seconds(), 2))
+                if not resp.status_code == 200:
+                    print(self.i + "\t" + colored(('\t'.join(map(str, [resp.status_code,len(resp.content),resplines,resptime,self.word]))),"red"))
+                else:
+                    print(self.i + "\t" + colored(('\t'.join(map(str, [resp.status_code,len(resp.content),resplines,resptime,self.word]))),"green"))
+                if Attack.valurl:
+                    valout = brequests.get(Attack.valurl,headers=self.headers,cookies=self.cookies,proxies=Attack.proxy,verify=False, allow_redirects=Attack.redirects)
+                    Attack.log.write("\n\n\n\n\n# ! HIT:  #"+  self.i + "\t" + ('\t'.join(map(str, ["C:"+str(resp.status_code),"S:"+str(len(resp.content)),"L:"+resplines,"T:"+resptime,"W:"+self.word]))) + "\t\n")
+                    open(F"file_{self.i}", "wb").write(valout.content)
+                    # Attack.log.write(valout.text)
+                elif not Attack.nolog:
+                    Attack.log.write("\n\n\n\n\n# ! HIT:  #"+  self.i + "\t" + ('\t'.join(map(str, ["C:"+str(resp.status_code),"S:"+str(len(resp.content)),"L:"+resplines,"T:"+resptime,"W:"+self.word]))) + "\t\n")
+                    if Attack.render:
+                        self.puppcookies = []
+                        for cookie in self.cookies:
+                            self.puppcookies.append({"name": cookie, "value": cookies[cookie], "domain": self.url.split("/")[2]})
+                        while len(multiprocessing.active_children()) > 3:
+                            time.sleep(1)
+                        p = multiprocessing.Process(target=Attack.render_output, args=(self,resp))
+                        p.start()
+                    else:
+                        Attack.log.write(resp.text)    
+
+    def b64(self,inpu):
+        return b64encode(inpu.encode('ascii')).decode("utf-8")
+
+    def render_output(self,resp):
+        resp.html.render(cookies=self.puppcookies)
+        Attack.log.write(resp.html.html)
+        if self.word in resp.text:
+            Attack.reflections.append(self.word)
+        self.session.close()
+         
+    def launch(self):
+        if Attack.jitter > 0:
+            time.sleep(random.uniform(0.1, Attack.jitter))
+        if Attack.threaded:
+            t = Thread(target=self.send, args=())
+            t.start()
+        else:
+            self.send()
+
+    def finish():
+        while len(multiprocessing.active_children()) > 1:
+            time.sleep(0.5)
+        print("                                                                  ", end="\r")
+        print("\n\n\nObservations: " + repr(Attack.observations))
+        Attack.log.close()
+        with open(logpath, "r") as fil:
+            data = fil.read()
+            for matchtype in matches:
+                regmatch = Attack.global_regex = re.compile('|'.join(matches[matchtype]),re.IGNORECASE).findall(data)
+                if regmatch:
+                    cleanlist = list(dict.fromkeys(regmatch))
+                    print("Regex Match! " + colored(matchtype, "yellow") + ": " + repr(cleanlist))
+        if len(Attack.reflections) > 0:
+            print(colored("Unmodified Reflections: ", "yellow") + repr(Attack.reflections))
+        print(colored("[+] DONE", "green"))
+        os.kill(os.getpid(), signal.SIGUSR1)
+    
+    class NoEncodeSession(requests.Session):
+        def send(self, *a, **kw):
+            for noencode in noencodes:
+                a[0].url = a[0].url.replace(urllib.parse.quote(noencode), noencode)
+            return requests.Session.send(self, *a, **kw)
+
+parser = argparse.ArgumentParser(description='Fuzz them.')
+# ! Fixed Args
+# From curl
+parser.add_argument('curl', action='store', help='This must be "curl"')
+parser.add_argument('-X', action='store', default="GET", help='HTTP Method (GET/POST)')
+# From bfuzz
+parser.add_argument('-wl', action='store', default=False, help='Wordlist to use')
+parser.add_argument('-nolog', action='store', default=False, help='')
+parser.add_argument('-csrf_url', action='store', default=False, help='')
+parser.add_argument('-csrf_string', action='store', default=False, help='')
+parser.add_argument('-threaded', '-th', action='store_true', default=False, help='')
+parser.add_argument('-redirects', action='store', default=True, help='')
+parser.add_argument('-jitter', '-ji', action='store', default=0.05, help='')
+parser.add_argument('-proxy', action='store', default=False, help='')
+parser.add_argument('-valurl', action='store', default=False, help='Validate attack by saving this url')
+parser.add_argument('-render', action='store_true', default=False, help='Render HTML to find DOM based vulns')
+parser.add_argument('-filter_time', '-ft', action='store', default=0, help='Filter by time (default = 0 = inactive)')
+parser.add_argument('-filter_size', '-fs', action='store', default=[], help='Filter by size (list)')
+parser.add_argument('-filter_line', '-fl', action='store', default=[], help='Filter by size (list)')
+parser.add_argument('-filter_code', '-fc', action='store', default=[], help='Filter by return status code (list)')
+parser.add_argument('-filter_str', '-fstr', action='store', default=[], help='Filter by string (filter if in resp)')
+parser.add_argument('-filter_str_rev', '-frev', action='store', default=[], help='Filter by string reversed (filter if NOT in resp)')
+# ! Instance Args
+parser.add_argument('target', action='store', help='Target URL from curl')
+parser.add_argument('-H', action='append', default=None, help='HTTP Headers')
+parser.add_argument('-b', action='store', default=None, help='HTTP Cookies')
+parser.add_argument('--data-binary', action='store', default=None, help='HTTP POST Params')
+# ! Ignored Curl Args
+parser.add_argument('-i', action='store_true', default=None, help='ignored')
+parser.add_argument('-s', action='store_true', default=None, help='ignored')
+parser.add_argument('-k', action='store_true', default=None, help='ignored')
+a = parser.parse_args()
+Attack.observations = {"codes": [], "lines": [], "times": []}
+Attack.reflections = []
+
+for arg in vars(a):
+    setattr(Attack, arg, getattr(a, arg))
+
+Attack.jitter = float(Attack.jitter)
+if not Attack.nolog:
+    Attack.log = open(logpath, "w", buffering=1)
+if Attack.wl:
+    if "," in Attack.wl:
+        wls = Attack.wl.split(",")
+    else:
+        wls = [Attack.wl]
+if Attack.filter_size:
+    if "," in Attack.filter_size:
+        Attack.filter_size = Attack.filter_size.split(",")
+    else:
+        Attack.filter_size = [Attack.filter_size]
+if Attack.filter_line:
+    if "," in Attack.filter_line:
+        Attack.filter_line = Attack.filter_line.split(",")
+    else:
+        Attack.filter_size = [Attack.filter_size]
+if Attack.filter_code:
+    if "," in Attack.filter_code:
+        Attack.filter_code = Attack.filter_code.split(",")
+    else:
+        Attack.filter_code = [Attack.filter_code]
+if Attack.filter_str:
+    if "," in Attack.filter_str:
+        Attack.filter_str = Attack.filter_str.split(",")
+    else:
+        Attack.filter_str = [Attack.filter_str]
+if Attack.filter_str_rev:
+    if "," in Attack.filter_str_rev:
+        Attack.filter_str_rev = Attack.filter_str_rev.split(",")
+    else:
+        Attack.filter_str_rev = [Attack.filter_str_rev]
+
+if Attack.proxy:
+    if Attack.proxy == "burp":
+        Attack.proxy = {
+            "http": "http://127.0.0.1:8080",
+            "https": "http://127.0.0.1:8080"
+        }
+    else:
+        Attack.proxy = {
+            "http": Attack.proxy,
+            "https": Attack.proxy
+        }
+
+fuzz_target = fuzz_cookie = fuzz_header = fuzz_post = False
+if "FUZZ" in Attack.target:
+    fuzz_target = True
+if Attack.b:
+    if "FUZZ" in Attack.b:
+        fuzz_cookie = True
+if Attack.H:
+    if "FUZZ" in Attack.H:
+        fuzz_header = True
+if Attack.data_binary:
+    if "FUZZ" in Attack.data_binary:
+        fuzz_post = True
+
+if not (fuzz_target or fuzz_cookie or fuzz_header or fuzz_post):
+    input("No FUZZ keyword identified. Continue?")
+
+i = 0
+url = Attack.target
+postparams = Attack.data_binary
+headers = {}
+if Attack.data_binary:
+    for header in Attack.H:
+        if "Content-Length" in header:
+            continue
+        headers[header.split(":")[0].strip()] = header.split(":")[1].strip()
+cookies = {}
+if Attack.b:
+    for cookie in Attack.b.split(";"):
+        cookies[cookie.split("=")[0].strip()] = cookie.split("=")[1].strip()
+
+try:
+    if Attack.wl:
+        pass
+    elif len(wls) > 0:
+        print("Using selected wordlists from bfuzz script:")
+        for i in wls:
+            print(i.split("/")[-1], end=" ")
+    else:
+        print("No wordlist given/selected.. using Breachlist")
+        wls = [wldir+"/blist.txt"]
+   
+    for wl in wls:
+        print("\nFuzzing with Wordlist " + wl + "\n")
+        print("#\tCode\tSize\tLines\tTime\tPayload")
+        with open(wl, 'r') as wl:
+            for i, word in enumerate(wl):
+                i += 1
+                word = word.strip()
+                atk = Attack(url, cookies, headers, postparams, word, str(i))
+                if fuzz_target:
+                    atk.url = url.replace("FUZZ", word)
+                if fuzz_post:
+                    atk.postparams = postparams.replace("FUZZ", word)
+                if fuzz_cookie:
+                    for cookie in cookies:
+                        atk.cookies[cookie] = cookies[cookie].replace("FUZZ", word)
+                if fuzz_header:
+                    for header in headers:
+                        atk.headers[header] = headers[header].replace("FUZZ", word)
+                if Attack.csrf_url:
+                    ### https://regex101.com/
+                    resp = requests.get(Attack.csrf_url,proxies=Attack.proxy,verify=False, allow_redirects=False)
+                        # Without dynamic session update:
+                        # resp = requests.get(Attack.csrf_url,headers=headers,cookies=cookies,proxies=Attack.proxy,verify=False, allow_redirects=False)
+                    head = str(resp.headers)
+                    cont = resp.text
+                    # EXAMPLE: ...name="csrf" value="QTL0gUQlVqfW5baOu4pKzBCf0uW6lkG1">
+                        # captured_value = re.search('name="csrf" value="(.*?)"', cont).group(1)
+                        # atk.postparams = re.sub(r'csrf=.*?&', "csrf=" + captured_value + "&", atk.postparams)
+                        # captured_session = re.search('session=(.*?);', head).group(1)
+                        # atk.cookies["session"] = captured_session
+                    captured_session = re.search('session=(.*?);', head).group(1)
+                    atk.cookies["session"] = captured_session
+                    captured_value = re.search('name="csrf" value="(.*?)"', cont).group(1)
+                    atk.postparams = re.sub(r'csrf=.*?&', "csrf=" + captured_value + "&", atk.postparams)
+                atk.launch()
+except KeyboardInterrupt:
+    print(colored("\n\n[-] Detected Ctrl + C ... EXIT", "red"))
+    Attack.finish()
+except Exception as e:
+    print(colored("[-] Something went wrong - check wordlist path OR request timed out", "red"))
+    print(repr(e))
+    traceback.print_exc()
+    Attack.finish()
+  
+while active_count() > 1:
+    time.sleep(1)
+Attack.finish()
