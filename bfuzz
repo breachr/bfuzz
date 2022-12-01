@@ -43,7 +43,7 @@ wls = [
     # ? Breachlist
     # wldir+"/blist.txt",
     # ? Custom WL
-    # "/home/breachr/OneDrive/ATTACK/PROJECT/HTB/traceback/customwl",
+    # "/PROJECT/HTB/traceback/customwl",
     # ? General Sanitization
     # wldir+"/inj_sani.txt",
     # ? Verbs
