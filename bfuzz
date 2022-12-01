@@ -37,8 +37,8 @@ print("""
                 .::.            .;c,   
                 
  """)
-logpath = "/home/breachr/OneDrive/ATTACK/PROJECT/bfuzz_out.md"
-wldir = "/home/breachr/OneDrive/ATTACK/FILE/Breachbox/payloads/wl"
+logpath = CHANGEME
+wldir = CHANGEME
 wls = [
     # ? Breachlist
     # wldir+"/blist.txt",
